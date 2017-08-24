@@ -17,6 +17,10 @@ var StoreFront = contract(storefront_artifacts);
 var accounts;
 var account;
 
+var numProducts = 0;
+var numTrans = 0;
+var data = new Array();
+
 window.App = {
   start: function() {
     var self = this;
@@ -41,8 +45,53 @@ window.App = {
 
       self.refreshBalance();
       self.setAccounts();
-      self.updateTables();
-    });
+
+
+      var meta;
+      StoreFront.deployed().then(function(instance) {
+      meta = instance;
+      return meta.getID.call({from: web3.eth.coinbase, gas: 300000});
+      }).then(function(value) {
+                  
+          numProducts = value.valueOf();
+
+          if (numProducts >= 0)
+          {
+
+            self.updateInventoryTable(0);
+          }
+
+
+          }).catch(function(e) {
+            console.log(e);
+            self.setStatus("Error sending coin; see log.");
+          }); 
+
+      var meta;
+      StoreFront.deployed().then(function(instance) {
+      meta = instance;
+      return meta.getTransLength.call({from: web3.eth.coinbase, gas: 300000});
+      }).then(function(value) {
+                  
+          numTrans = value.valueOf();
+
+          if (numTrans >= 1)
+          {
+            //console.log(numTrans);
+            self.updateTransactionTable(0);
+          }
+
+
+          }).catch(function(e) {
+            console.log(e);
+            self.setStatus("Error sending coin; see log.");
+          }); 
+
+
+
+
+      });
+
   },
 
   setStatus: function(message) {
@@ -119,14 +168,26 @@ window.App = {
     var meta;
     StoreFront.deployed().then(function(instance) {
       meta = instance;
-      //console.log(meta.address);
-
-      $("#StoreFrontAddress").html(meta.address);
-
       return meta.getBalance.call(account, {from: account});
     }).then(function(value) {
       var balance_element = document.getElementById("balance");
       balance_element.innerHTML = value.valueOf();
+    }).catch(function(e) {
+      console.log(e);
+      self.setStatus("Error getting balance; see log.");
+    });
+
+    var meta;
+    StoreFront.deployed().then(function(instance) {
+      meta = instance;
+      //console.log(meta.address);
+
+      $("#StoreFrontAddress").html(meta.address);
+
+      return meta.getBalance.call(meta.address, {from: account});
+    }).then(function(value) {
+      $("#StoreFrontBalance").html(value.valueOf());
+
     }).catch(function(e) {
       console.log(e);
       self.setStatus("Error getting balance; see log.");
@@ -165,7 +226,6 @@ window.App = {
             //console.log(data._idInventory.toNumber());
             //console.log(data._price.toNumber());
             //console.log(data._quantity.toNumber());
-
     var productSelect = document.getElementById("productSelect");
 
        var option = document.createElement("option");
@@ -188,6 +248,7 @@ window.App = {
     var merchantCell = row.insertCell(4);
     var removeCell = row.insertCell(5);
 
+
     idCell.innerHTML = data._idInventory.toNumber();
     nameCell.innerHTML = data._name;
     quantityCell.innerHTML = data._quantity.toNumber();
@@ -199,12 +260,67 @@ window.App = {
 
 
   },
+    setTransaction: function(data) {
+            //console.log(data._merchant);
+            //console.log(data._name);
+            //console.log(data._idInventory.toNumber());
+            //console.log(data._price.toNumber());
+            //console.log(data._quantity.toNumber());
+
+
+// Update table
+    var table = document.getElementById("transactions").getElementsByTagName('tbody')[0];
+    //$('table#transactions tr#transactions-' + product.productID).remove();
+    var currencySelect = $("#currencySelect option:selected").val();
+
+    var row = table.insertRow(0);
+
+    row.id = 'product-' + data._idInventory.toNumber();
+
+    var idCell = row.insertCell(0);
+    var nameCell = row.insertCell(1);
+    var quantityCell = row.insertCell(2);
+    var priceCell = row.insertCell(3);
+    var currencyCell = row.insertCell(4);
+    var buyerCell = row.insertCell(5);
+    var merchantCell = row.insertCell(6);
+    //var buttonCell = row.insertCell(7);
+    
+    idCell.innerHTML = data._idInventory.toNumber();
+    nameCell.innerHTML = data._name;
+    quantityCell.innerHTML = "1";
+    priceCell.innerHTML = data._price;
+    buyerCell.innerHTML = data._buyer; 
+
+    //if (coBuyerVar == "True")
+    //{
+    //quantityCell.innerHTML = "0.5";
+    //priceCell.innerHTML = productPrice/2;
+    //buyerCell.innerHTML = productBuyer; 
+    //}
+
+    //if (coBuyerVar == "False")
+    //{
+    //quantityCell.innerHTML = "1";
+    //priceCell.innerHTML = productPrice;
+    //buyerCell.innerHTML = productBuyer;
+    //}
+
+    //currencyCell.innerHTML = currencyName; 
+    currencyCell.innerHTML = currencySelect;   
+    merchantCell.innerHTML = data._merchant;
+
+
+
+
+  },
 
   removeProduct: function(data) {
     
     $('table#inventory tr#inventory-' + data).remove();
 
     $('#productSelect option[value=' + data + ']').remove();
+    var self = this;
     //console.log(data);
 
     //products.length--;
@@ -212,72 +328,155 @@ window.App = {
     //$("#CashOutButton").hide();
 
     //showBalances();
+
+        var meta;
+    StoreFront.deployed().then(function(instance) {
+      meta = instance;
+
+      return meta.removeID(data, {from: web3.eth.coinbase, gas: 300000});
+
+    }).then(function() {
+      self.setStatus("Transaction complete!");
+    }).catch(function(e) {
+      console.log(e);
+      self.setStatus("Error sending coin; see log.");
+    });
+  
   
 
   },
 
-  updateTables: function() {
+  updateInventoryTable: function(indexValue) {
     var self = this;
 
+    
 
-    var meta;
-    StoreFront.deployed().then(function(instance) {
-      meta = instance;
 
-      return meta.getID.call({from: web3.eth.coinbase, gas: 300000});
-    }).then(function(value) {
-      
-      var numProducts = value.valueOf();
 
-      
-      if(numProducts != 0)
-        //for(var i=1; i<=numProducts;i++)
-      {
+
           var meta;
           StoreFront.deployed().then(function(instance) {
           meta = instance;
             var transfers = meta.LogInventory({fromBlock: "latest"});
             transfers.watch(function(error, result) {
               // This will catch all Transfer events, regardless of how they originated.
-              if (error == null) {
+              if (error == null && result.args._name != "" ) {
+
                 self.setInventory(result.args);
                 //self.setData(result.args);
               }
             transfers.stopWatching();
-            });
-          return meta.getProductDetails(numProducts, {from: web3.eth.coinbase, gas: 300000});
+            });            
+          return meta.getProductDetails(indexValue, {from: web3.eth.coinbase, gas: 300000});
+      
         }).then(function() {
-          self.setStatus("Transaction complete!");          
+          self.setStatus("Transaction complete!");              
+
+
+                  var meta;
+                StoreFront.deployed().then(function(instance) {
+                  meta = instance;
+
+                  return meta.getID.call({from: web3.eth.coinbase, gas: 300000});
+                }).then(function(value) {
+                  
+                  numProducts = value.valueOf();
+
+                  if (indexValue < numProducts)
+                  {
+
+                    self.updateInventoryTable(indexValue+1);
+                  }
+
+                  //console.log(indexValue);
+
+                  //console.log(numProducts);
+
+
+                  }).catch(function(e) {
+                  console.log(e);
+                  self.setStatus("Error sending coin; see log.");
+                  });
+
           //self.refreshBalance();
         }).catch(function(e) {
           console.log(e);
           self.setStatus("Error sending coin; see log.");
         });
-
-        //}
-      }
+       
 
 
+ 
 
 
-         //console.log(value.valueOf());
+  },
+
+    updateTransactionTable: function(indexValue) {
+    var self = this;
+
+    
+
+
+
+
+          var meta;
+          StoreFront.deployed().then(function(instance) {
+          meta = instance;
+            var transfers = meta.LogTransaction({fromBlock: "latest"});
+            transfers.watch(function(error, result) {
+              // This will catch all Transfer events, regardless of how they originated.
+              //if (error == null && result.args._name != "" ) {
+
+                self.setTransaction(result.args);
+                //self.setData(result.args);
+                //console.log(result.args._buyer);
+              //}
+            transfers.stopWatching();
+            });            
+          return meta.getTransDetail(indexValue, {from: web3.eth.coinbase, gas: 300000});
       
+        }).then(function() {
+          self.setStatus("Transaction complete!");     
+
+
+                var meta;
+                StoreFront.deployed().then(function(instance) {
+                  meta = instance;
+
+                  return meta.getTransLength.call({from: web3.eth.coinbase, gas: 300000});
+                }).then(function(value) {
+                  
+                  numTrans = value.valueOf() - 1;
+                  console.log(numTrans);
+
+                  if (indexValue < numTrans)
+                  {
+
+                    self.updateTransactionTable(indexValue+1);
+                  }
+
+                  //console.log(indexValue);
+
+                  //console.log(numProducts);
+
+
+                  }).catch(function(e) {
+                  console.log(e);
+                  self.setStatus("Error sending coin; see log.");
+                  });         
 
 
 
-    }).catch(function(e) {
-      console.log(e);
-      self.setStatus("Error sending coin; see log.");
-    });
+          //self.refreshBalance();
+        }).catch(function(e) {
+          console.log(e);
+          self.setStatus("Error sending coin; see log.");
+        });
+       
 
 
+ 
 
-
-
-
-
-
-  
 
   },
 
@@ -285,33 +484,63 @@ window.App = {
     var self = this;
 
         var productBuyer = $("#buyerSelect option:selected").val();
-        var productBuyerV = document.getElementById("buyerSelect").selectedIndex + 1;
+        var productSelect = document.getElementById("productSelect").value;
 
-                            var meta;
+//$('#productSelect option[value=' + data + ']').remove();
+
+        var meta;
+                StoreFront.deployed().then(function(instance) {
+                  meta = instance;
+
+                  return meta.getPrice.call(productSelect, {from: web3.eth.coinbase, gas: 300000});
+                }).then(function(value) {
+                  
+                  data[0] = value.valueOf();
+                  //console.log(indexValue);
+
+                 
+                            var meta;                            
                     
-    StoreFront.deployed().then(function(instance) {
-      meta = instance;
-        var transfers = meta.LogInventory({fromBlock: "latest"});
-        transfers.watch(function(error, result) {
-          // This will catch all Transfer events, regardless of how they originated.
-          if (error == null) {
-            self.setInventory(result.args);
-            
-            //self.setData(result.args);
-          }
-          transfers.stopWatching();
-        });
-      return meta.buyProduct(productBuyerV, 1, {from: productBuyer, gas: 300000});
-    }).then(function() {
-      self.setStatus("Transaction complete!");
-      self.refreshBalance();
+              StoreFront.deployed().then(function(instance) {
+                meta = instance;
+                  var transfers = meta.LogInventory({fromBlock: "latest"});
+                  transfers.watch(function(error, result) {
+                    // This will catch all Transfer events, regardless of how they originated.
+                    if (error == null) {
+                      self.setInventory(result.args);
+                     
+                      //self.setData(result.args);
+                    }
+                    transfers.stopWatching();
+                  });
+
+                  var transfers2 = meta.LogTransaction({fromBlock: "latest"});
+                  transfers2.watch(function(error, result) {
+                    // This will catch all Transfer events, regardless of how they originated.
+                    if (error == null) {
+                      self.setTransaction(result.args);
+                      
+                      
+                      //self.setData(result.args);
+                    }
+                    transfers2.stopWatching();
+                  });
+
+                return meta.buyProduct(productSelect, 1, {from: productBuyer, gas: 300000, value: data[0] });
+              }).then(function() {
+                self.setStatus("Transaction complete!");
+                self.refreshBalance();
+              }).catch(function(e) {
+                console.log(e);
+                self.setStatus("Error sending coin; see log.");
+              });
+  
     }).catch(function(e) {
       console.log(e);
       self.setStatus("Error sending coin; see log.");
-    });
-  
+    });                   
 
-
+ 
 },
 
 
