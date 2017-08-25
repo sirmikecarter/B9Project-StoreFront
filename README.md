@@ -1,4 +1,4 @@
-# B9SmallProject - StoreFront
+# B9Project - StoreFront
 
 # Using:
 - testrpc --accounts="5"
