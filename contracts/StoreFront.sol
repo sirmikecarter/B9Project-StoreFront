@@ -1,16 +1,10 @@
 pragma solidity ^0.4.2;
 
-
-// This is just a simple example of a coin-like contract.
-// It is not standards compatible and cannot be expected to talk to other
-// coin/token contracts. If you want to create a standards-compliant
-// token, see: https://github.com/ConsenSys/Tokens. Cheers!
-
 contract StoreFront {
 	mapping (address => uint) balances;
 	uint    public id;
 
-	event LogInventory(address _merchant, string _name, uint _idInventory, uint _price, uint256 _quantity);
+	event LogInventory(address _merchant, string _name, uint _idInventory, uint _price, uint256 _quantity, uint _amountOwed);
 	event LogTransaction(address _merchant, address _buyer, string _CoBuyer, string _name, uint _idInventory, uint _price, uint256 _quantity);
 	
 	struct StoreFrontInventory {
@@ -18,6 +12,7 @@ contract StoreFront {
 		string productName;
 		uint productPrice;
 		uint productQuantity;
+		uint amountOwed;
 	    }
 
 	struct StoreFrontTransaction {
@@ -36,8 +31,6 @@ contract StoreFront {
 	StoreFrontTransaction[] public storeFrontTransaction;
 
     
-    
-
 	function StoreFront() {
 		balances[tx.origin] = 10000;
 	}
@@ -50,8 +43,9 @@ contract StoreFront {
         newProduct.productName = productN;
         newProduct.productPrice = productP;
         newProduct.productQuantity = productQ;
+        newProduct.amountOwed = 0;
         storeFront[id] = newProduct;      		
-		LogInventory(msg.sender,productN,id,productP,productQ);
+		LogInventory(msg.sender,productN,id,productP,productQ,newProduct.amountOwed);
 		id++;
 		
 		return true;
@@ -62,8 +56,9 @@ contract StoreFront {
         StoreFrontInventory memory toVerify = storeFront[productID];
         assert(toVerify.productQuantity>=quantity);
         toVerify.productQuantity -= quantity;
+        toVerify.amountOwed += toVerify.productPrice * quantity;
         storeFront[productID] = toVerify;
-        LogInventory(toVerify.productMerchant, toVerify.productName, productID, toVerify.productPrice, toVerify.productQuantity );
+        LogInventory(toVerify.productMerchant, toVerify.productName, productID, toVerify.productPrice, toVerify.productQuantity, toVerify.amountOwed );
         
         StoreFrontTransaction memory newTransaction;
         newTransaction.productMerchant = toVerify.productMerchant;
@@ -83,6 +78,20 @@ contract StoreFront {
          
                 
         return true;
+    }
+
+    function widthdrawFunds(uint idWithdraw, uint amountWithdraw) public returns(bool success) {
+        
+        StoreFrontInventory memory toVerify = storeFront[idWithdraw];
+        toVerify.amountOwed = 0;
+        msg.sender.transfer(amountWithdraw);
+        return true;
+    }
+
+    function getMerchant(uint idGetMerchant) public returns(bool success) {
+		StoreFrontInventory memory toVerify = storeFront[idGetMerchant];
+		LogInventory(toVerify.productMerchant, toVerify.productName, idGetMerchant, toVerify.productPrice, toVerify.productQuantity, toVerify.amountOwed );
+		return true;
     }
 
 	function getBalance(address addr) returns(uint) {
@@ -118,7 +127,7 @@ contract StoreFront {
 
 	function getProductDetails(uint idDetail) returns(bool success) {
 		StoreFrontInventory memory toVerify = storeFront[idDetail];
-		LogInventory(msg.sender, toVerify.productName, idDetail, toVerify.productPrice, toVerify.productQuantity);
+		LogInventory(msg.sender, toVerify.productName, idDetail, toVerify.productPrice, toVerify.productQuantity, toVerify.amountOwed);
 		return true;
 	}
 }

@@ -528,7 +528,8 @@ window.App = {
                   data[1] = productCoBuyer;
                         if(productCoBuyer != "None")
                         {
-                              data[0] = value.valueOf() / 2;
+                              data[0] = parseFloat(value.valueOf() / 2);
+                              console.log(data[0]);
 
                         }else{
                               data[0] = value.valueOf();
@@ -581,7 +582,7 @@ window.App = {
                         meta = instance;
 
 
-                        return meta.sendCoBuyerTransaction({from: productCoBuyer, gas: 300000, value: data[0] });
+                        return meta.sendCoBuyerTransaction({from: productCoBuyer, value: data[0] });
                       }).then(function() {
                         self.setStatus("Transaction complete!");
                         self.refreshBalance();
@@ -616,6 +617,58 @@ window.App = {
                             
 
  
+},
+
+withdrawFunds: function() {
+    var self = this;
+    var productMerchant = $("#merchantSelect option:selected").val();
+    var productSelect = document.getElementById("productSelect").value;
+
+    this.setStatus("Initiating transaction... (please wait)");
+
+
+
+    var meta;
+    StoreFront.deployed().then(function(instance) {
+      meta = instance;
+        var transfers = meta.LogInventory({fromBlock: "latest"});
+        transfers.watch(function(error, result) {
+                        // This will catch all Transfer events, regardless of how they originated.
+            if (error == null && result.args._merchant == productMerchant ) {
+                          //self.setInventory(result.args);
+                          //self.setData(result.args);
+                var AmountOwed = result.args._amountOwed.toNumber();
+                            var meta;
+                            StoreFront.deployed().then(function(instance) {
+                              meta = instance;
+                              return meta.widthdrawFunds(productSelect, AmountOwed, {from: productMerchant , gas: 300000});
+
+                            }).then(function() {
+                              self.setStatus("Transaction complete!");
+                              self.refreshBalance();
+                            }).catch(function(e) {
+                              console.log(e);
+                              self.setStatus("Error sending coin; see log.");
+                            });
+
+
+            }
+            transfers.stopWatching();
+            });
+    return meta.getMerchant(productSelect, {from: web3.eth.coinbase, gas: 300000});
+    }).then(function() {
+      self.setStatus("Transaction complete!");
+      //self.refreshBalance();
+    }).catch(function(e) {
+      console.log(e);
+      self.setStatus("Error sending coin; see log.");
+    });
+  
+
+
+
+
+
 },
 
 
