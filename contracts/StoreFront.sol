@@ -11,7 +11,7 @@ contract StoreFront {
 	uint    public id;
 
 	event LogInventory(address _merchant, string _name, uint _idInventory, uint _price, uint256 _quantity);
-	event LogTransaction(address _merchant, address _buyer, string _name, uint _idInventory, uint _price, uint256 _quantity);
+	event LogTransaction(address _merchant, address _buyer, string _CoBuyer, string _name, uint _idInventory, uint _price, uint256 _quantity);
 	
 	struct StoreFrontInventory {
 		address productMerchant;
@@ -23,6 +23,7 @@ contract StoreFront {
 	struct StoreFrontTransaction {
 		address productMerchant;
 		address productBuyer;
+		string productCoBuyer;
 		uint productID;
 		string productName;
 		uint productPrice;
@@ -56,7 +57,7 @@ contract StoreFront {
 		return true;
 	}
 
-	function buyProduct(uint productID, uint quantity) public payable returns (bool success) {
+	function buyProduct(uint productID, uint quantity, string coBuyerAddress) public payable returns (bool success) {
          
         StoreFrontInventory memory toVerify = storeFront[productID];
         assert(toVerify.productQuantity>=quantity);
@@ -67,13 +68,20 @@ contract StoreFront {
         StoreFrontTransaction memory newTransaction;
         newTransaction.productMerchant = toVerify.productMerchant;
         newTransaction.productBuyer = msg.sender;
+        newTransaction.productCoBuyer = coBuyerAddress;
         newTransaction.productID = productID;
         newTransaction.productName = toVerify.productName;
         newTransaction.productPrice = toVerify.productPrice;
         newTransaction.productQuantity = quantity;
         storeFrontTransaction.push(newTransaction);
-        LogTransaction(toVerify.productMerchant, newTransaction.productBuyer, toVerify.productName, productID, toVerify.productPrice, toVerify.productQuantity );
+        LogTransaction(toVerify.productMerchant, newTransaction.productBuyer, newTransaction.productCoBuyer, toVerify.productName, productID, toVerify.productPrice, toVerify.productQuantity );
         
+        return true;
+    }
+
+    function sendCoBuyerTransaction() public payable returns (bool success) {
+         
+                
         return true;
     }
 
@@ -94,7 +102,7 @@ contract StoreFront {
 
 	function getTransDetail(uint idTrans) returns(bool success) {
 
-		LogTransaction(storeFrontTransaction[idTrans].productMerchant, storeFrontTransaction[idTrans].productBuyer, storeFrontTransaction[idTrans].productName, storeFrontTransaction[idTrans].productID, storeFrontTransaction[idTrans].productPrice, storeFrontTransaction[idTrans].productQuantity );
+		LogTransaction(storeFrontTransaction[idTrans].productMerchant, storeFrontTransaction[idTrans].productBuyer, storeFrontTransaction[idTrans].productCoBuyer, storeFrontTransaction[idTrans].productName, storeFrontTransaction[idTrans].productID, storeFrontTransaction[idTrans].productPrice, storeFrontTransaction[idTrans].productQuantity );
 		return true;
 	}
 
